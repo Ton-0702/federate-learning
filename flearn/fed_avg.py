@@ -9,24 +9,28 @@ from .models import MLP
 # https://uk.arxiv.org/pdf/1602.05629v1.pdf
 
 
-def get_grad(model):
-    grad_dict = {}
+def get_weight(model):
+    weight_dct = {}
     for name, param in model.named_parameters():
-        grad_dict[name] = param.grad
-    return grad_dict
+        weight_dct[name] = param
+    return weight_dct
 
 
 class Client:
-    def __init__(self, data, configs={}):
+    def __init__(self, name, data, configs={}):
         self.configs = configs
         self.n_epochs = configs.get('n_epochs', 5)
         self.batch_size = configs.get('batch_size', 8)
         self.x = data['x']
         self.y = data['y']
         self.n = len(self.x)
+        self.name = name
 
     def get_num_samples(self):
         return self.n
+
+    def get_name(self):
+        return self.name
 
     def local_update(self, model, opt, loss_func):
         for _ in range(self.n_epochs):
@@ -44,32 +48,26 @@ class Client:
                 model.train()
                 opt.zero_grad()
                 ys_bar = model(xs)
-                loss = loss_func(ys, ys_bar)
+                loss = loss_func(ys_bar, ys)
                 loss.backward()
                 opt.step()
-        # Return client number of samples and gradient
-        return self.n, get_grad(model)
+        return self.n, get_weight(model)
 
 
 def server(base_model,
            base_opt,
            loss_func,
            clients,
-           num_rounds,
-           model_configs,
-           opt_configs):
-    model = base_model(**model_configs)
-    opt = base_opt(**opt_configs)
+           num_rounds):
+    model = base_model
+    opt = base_opt
     n = 0
     for clt in clients:
-        n += clt.get_n_samples()
+        n += clt.get_num_samples()
     for r in range(num_rounds):
         for clt in clients:
-            nk, grad = clt.local_update(model, opt, loss_func)
-            for key in grad.keys():
-                model.state_dict()[key] += nk/n * grad[key]
-
-
-if __name__ == '__main__':
-    pass
+            nk, ws = clt.local_update(model, opt, loss_func)
+            for key in ws.keys():
+                model.state_dict()[key] += nk/n * ws[key]
+    return model
 
