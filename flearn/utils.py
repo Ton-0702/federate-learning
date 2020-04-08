@@ -5,16 +5,18 @@ import numpy as np
 from sklearn.metrics import roc_auc_score
 
 
-def auc(y_true, y_scores):
+def auc(y_true, y_scores, multi_class=False):
     if not isinstance(y_true, np.ndarray):
         y_true = y_true.detach().numpy()
     if not isinstance(y_scores, np.ndarray):
         y_scores = y_scores.detach().numpy()
-    return roc_auc_score(y_true, y_scores)
+    if not multi_class:
+        return roc_auc_score(y_true, y_scores)
+    return roc_auc_score(y_true, y_scores, multi_class='ovo')
 
 
 def read_data(train_data_dir, test_data_dir, convert_tensor=True):
-    '''parses data in given train and test data directories
+    """parses data in given train and test data directories
 
     assumes:
     - the data in the input directories are .json files with
@@ -26,7 +28,7 @@ def read_data(train_data_dir, test_data_dir, convert_tensor=True):
         groups: list of group ids; empty list if none found
         train_data: dictionary of train data
         test_data: dictionary of test data
-    '''
+    """
     clients = []
     groups = []
     train_data = {}
@@ -58,23 +60,23 @@ def read_data(train_data_dir, test_data_dir, convert_tensor=True):
             train_data[client]['x'] = torch.tensor(train_data[client]['x'],
                                                    dtype=torch.float32)
             train_data[client]['y'] = torch.tensor(train_data[client]['y'],
-                                                   dtype=torch.float32)
+                                                   dtype=torch.long)
             test_data[client]['x'] = torch.tensor(test_data[client]['x'],
                                                   dtype=torch.float32)
             test_data[client]['y'] = torch.tensor(test_data[client]['y'],
-                                                  dtype=torch.float32)
+                                                  dtype=torch.long)
 
     return clients, groups, train_data, test_data
 
 
 if __name__ == '__main__':
-    train_dir = '../data/adult/data/train'
-    test_dir = '../data/adult/data/test'
+    train_dir = '../data/fmnist/data/train'
+    test_dir = '../data/fmnist/data/test'
 
     clients, groups, train_data, test_data = read_data(train_dir, test_dir)
     print(clients)
-    print(groups)
-    print(len(test_data['phd']['x']))
-    print(len(test_data['phd']['x'][0]))
-    print(len(test_data['phd']['y']))
+    key = list(train_data.keys())[1]
+    print(len(train_data[key]['x']))
+    print(len(train_data[key]['x'][0]))
+    print(train_data[key]['y'])
 

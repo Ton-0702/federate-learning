@@ -6,9 +6,10 @@ import torch.optim as optim
 import torch.nn as nn
 
 
-def run_app():
-    train_dir = 'data/adult/data/train'
-    test_dir = 'data/adult/data/test'
+def run_app(train_dir,
+            test_dir,
+            configs
+            ):
 
     client_names, groups, train_data, test_data = read_data(train_dir, test_dir)
 
@@ -17,26 +18,37 @@ def run_app():
         clients.append(Client(c_name, train_data[c_name]))
 
     # Logistic regression model
-    base_model = MLP([99, 1], ['sigmoid'])
+    layer_sizes = configs.get('layer_sizes')
+    act_funcs = configs.get('act_funcs')
+    loss_func = nn.BCELoss() if act_funcs[-1] == 'sigmoid' else nn.NLLLoss()
+    num_rounds = configs.get('num_rounds', 1)
+
+    base_model = MLP(layer_sizes, act_funcs)
     base_opt = optim.SGD(params=base_model.parameters(), lr=0.05)
-    loss_func = nn.BCELoss()
 
     model = server(base_model,
                    base_opt,
                    loss_func,
                    clients,
-                   num_rounds=1)
+                   num_rounds)
 
     # Use trained model to predict test dataset
-    phd_scores = model(test_data['phd']['x'])
-    phd_auc = auc(test_data['phd']['y'], phd_scores)
-    non_phd_scores = model(test_data['non-phd']['x'])
-    non_phd_auc = auc(test_data['non-phd']['y'], non_phd_scores)
-
-    print('phd auc: ', phd_auc)
-    print('non phd auc: ', non_phd_auc)
+    multi_class = True if layer_sizes[-1] > 1 else False
+    for i, c_name in enumerate(client_names):
+        if multi_class:
+            i_name = int(c_name.split(':')[0])
+            scores = model(test_data[c_name]['x'])[:, i_name]
+        else:
+            scores = model(test_data[c_name]['x'])
+        auc_score = auc(test_data[c_name]['y'], scores)
+        print('client: ', c_name)
+        print('num samples: ', test_data[c_name]['x'].shape)
+        print('AUC: ', auc_score)
 
 
 if __name__ == '__main__':
-    run_app()
+    run_app('data/adult/data/train',
+            'data/adult/data/test',
+            {'layer_sizes': [99, 128, 1], 'act_funcs': ['relu', 'sigmoid']}
+            )
 

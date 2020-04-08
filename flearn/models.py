@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import os
+import torch.optim as optim
 
 
 class MLP(nn.Module):
@@ -17,13 +18,13 @@ class MLP(nn.Module):
 
     def forward(self, x):
         for layer, act_func in zip(self.layers, self.act_funcs):
+            x = layer(x)
             if act_func == 'relu':
-                x = torch.relu(layer(x))
+                x = torch.relu(x)
             elif act_func == 'sigmoid':
-                x = torch.sigmoid(layer(x))
+                x = torch.sigmoid(x)
             elif act_func == 'softmax':
-                x = torch.softmax(layer(x))
+                x = torch.softmax(x, dim=-1)
             elif act_func == 'none':
                 x = layer(x)
         return x
-
