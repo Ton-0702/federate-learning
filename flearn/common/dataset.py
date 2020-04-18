@@ -1,18 +1,14 @@
+
+import pandas as pd
+import torch.utils.data as data
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold, KFold
+import numpy as np
 import os
+import glob
 import json
 import torch
-import numpy as np
-from sklearn.metrics import roc_auc_score
-
-
-def auc(y_true, y_scores, multi_class=False):
-    if not isinstance(y_true, np.ndarray):
-        y_true = y_true.detach().numpy()
-    if not isinstance(y_scores, np.ndarray):
-        y_scores = y_scores.detach().numpy()
-    if not multi_class:
-        return roc_auc_score(y_true, y_scores)
-    return roc_auc_score(y_true, y_scores, multi_class='ovo')
 
 
 def read_data(train_data_dir, test_data_dir, convert_tensor=True):
@@ -60,23 +56,27 @@ def read_data(train_data_dir, test_data_dir, convert_tensor=True):
             train_data[client]['x'] = torch.tensor(train_data[client]['x'],
                                                    dtype=torch.float32)
             train_data[client]['y'] = torch.tensor(train_data[client]['y'],
-                                                   dtype=torch.float)
+                                                   dtype=torch.long)
             test_data[client]['x'] = torch.tensor(test_data[client]['x'],
                                                   dtype=torch.float32)
             test_data[client]['y'] = torch.tensor(test_data[client]['y'],
-                                                  dtype=torch.float)
+                                                  dtype=torch.long)
 
     return clients, groups, train_data, test_data
 
 
-if __name__ == '__main__':
-    train_dir = '../data/fmnist/data/train'
-    test_dir = '../data/fmnist/data/test'
+class FEDDataset(data.Dataset):
+    def __init__(self, x, y):
+        self.data_x = x
+        self.data_y = y
 
-    clients, groups, train_data, test_data = read_data(train_dir, test_dir)
-    print(clients)
-    key = list(train_data.keys())[1]
-    print(len(train_data[key]['x']))
-    print(len(train_data[key]['x'][0]))
-    print(train_data[key]['y'])
+    def __len__(self):
+        return len(self.data_x)
+
+    def __getitem__(self, idx):
+        return self.data_x[idx], self.data_y[idx]
+
+    def get_raw_data(self):
+        return self.data_x, self.data_y
+
 
