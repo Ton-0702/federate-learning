@@ -1,6 +1,6 @@
 
 from flearn.algo.client import Client
-from flearn.algo.server import FedAvgServer, FedSgdServer
+from flearn.algo.server import FedAvgServer, FedSgdServer, QFedSgdServer, QFedAvgServer
 from flearn.model.neural_net import MLP
 from flearn.utils import read_data
 import torch.optim as optim
@@ -25,7 +25,7 @@ def run_app(train_dir,
     for c_name in client_names:
         clients.append(Client(c_name, [], train_data[c_name], test_data[c_name], base_model, base_opt, lossf))
 
-    server = FedSgdServer(base_model, base_opt, lossf, clients, train_data, test_data)
+    server = QFedAvgServer(base_model, base_opt, lossf, clients, train_data, test_data)
     server.train()
     server.evaluate()
 

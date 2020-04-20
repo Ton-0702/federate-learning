@@ -75,15 +75,15 @@ class Client:
 
     def get_train_error(self):
         y_bar = self.model(self.train_data['x'])
-        return self.lossf(y_bar, self.train_data['y'])
+        return self.lossf(y_bar, self.train_data['y']).item()
 
     def get_val_error(self):
         y_bar = self.model(self.val_data['x'])
-        return self.lossf(y_bar, self.val_data['y'])
+        return self.lossf(y_bar, self.val_data['y']).item()
 
     def get_test_error(self):
         y_bar = self.model(self.test_data['x'])
-        return self.lossf(y_bar, self.test_data['y'])
+        return self.lossf(y_bar, self.test_data['y']).item()
 
     def get_train_accuracy(self):
         y_bar = (self.model(self.train_data['x']) > 0.5).float().squeeze(-1)
