@@ -15,7 +15,7 @@ def auc(y_true, y_scores, multi_class=False):
     return roc_auc_score(y_true, y_scores, multi_class='ovo')
 
 
-def read_data(train_data_dir, test_data_dir, convert_tensor=True):
+def read_data(train_data_dir, test_data_dir, ytype, convert_tensor=True):
     """parses data in given train and test data directories
 
     assumes:
@@ -59,12 +59,13 @@ def read_data(train_data_dir, test_data_dir, convert_tensor=True):
         for client in clients:
             train_data[client]['x'] = torch.tensor(train_data[client]['x'],
                                                    dtype=torch.float32)
-            train_data[client]['y'] = torch.tensor(train_data[client]['y'],
-                                                   dtype=torch.float)
             test_data[client]['x'] = torch.tensor(test_data[client]['x'],
                                                   dtype=torch.float32)
+
+            train_data[client]['y'] = torch.tensor(train_data[client]['y'],
+                                                   dtype=ytype)
             test_data[client]['y'] = torch.tensor(test_data[client]['y'],
-                                                  dtype=torch.float)
+                                                  dtype=ytype)
 
     return clients, groups, train_data, test_data
 

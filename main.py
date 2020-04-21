@@ -1,8 +1,9 @@
 
 from flearn.algo.client import Client
 from flearn.algo.server import FedAvgServer, FedSgdServer, QFedSgdServer, QFedAvgServer
-from flearn.model.neural_net import MLP
+from flearn.model.mlp import MLP
 from flearn.utils import read_data
+import torch
 import torch.optim as optim
 import torch.nn as nn
 
@@ -11,6 +12,8 @@ def run_app(train_dir,
             test_dir,
             configs
             ):
+    client_names, groups, train_data, test_data = read_data(train_dir, test_dir, torch.long)
+
     # Logistic regression model
     layer_sizes = configs.get('layer_sizes')
     act_funcs = configs.get('act_funcs')
@@ -18,8 +21,6 @@ def run_app(train_dir,
 
     base_model = MLP(layer_sizes, act_funcs)
     base_opt = optim.SGD(params=base_model.parameters(), lr=0.05)
-
-    client_names, groups, train_data, test_data = read_data(train_dir, test_dir)
 
     clients = []
     for c_name in client_names:
@@ -31,8 +32,8 @@ def run_app(train_dir,
 
 
 if __name__ == '__main__':
-    run_app('data/adult/data/train',
-            'data/adult/data/test',
-            {'layer_sizes': [99, 128, 128, 1], 'act_funcs': ['relu', 'relu', 'sigmoid']}
+    run_app('data/synthetic/train/',
+            'data/synthetic/test/',
+            {'layer_sizes': [60, 120, 10], 'act_funcs': ['relu', 'softmax']}
             )
 

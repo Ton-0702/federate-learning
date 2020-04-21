@@ -13,8 +13,8 @@ class BaseServer:
     def __init__(self, model, opt, lossf, clients, train_data, test_data, configs=None):
         if configs is None:
             configs = {
-                'num_rounds': 5,
-                'pct_client_per_round': 1,
+                'num_rounds': 10,
+                'pct_client_per_round': 0.3,
                 'num_epochs': 3,
                 'batch_size': 8,
                 'lr': 0.1,
