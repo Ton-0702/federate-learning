@@ -1,4 +1,3 @@
-
 from flearn.algo.client import Client
 from flearn.algo.server import FedAvgServer, FedSgdServer, QFedSgdServer, QFedAvgServer
 from flearn.model.mlp import MLP
@@ -26,7 +25,16 @@ def run_app(train_dir,
     for c_name in client_names:
         clients.append(Client(c_name, [], train_data[c_name], test_data[c_name], base_model, base_opt, lossf))
 
-    server = QFedAvgServer(base_model, base_opt, lossf, clients, train_data, test_data, configs['dataset_name'])
+    server = FedAvgServer(model=base_model,
+                          opt=base_opt,
+                          lossf=lossf,
+                          clients=clients,
+                          train_data=train_data,
+                          test_data=test_data,
+                          dataset_name=configs['dataset_name'],
+                          method_name=configs['method_name']
+                          )
+
     server.train()
     server.evaluate()
     server.report()
@@ -37,7 +45,7 @@ if __name__ == '__main__':
             'data/synthetic/test/',
             {
                 'layer_sizes': [60, 10], 'act_funcs': ['softmax'],
-                'dataset_name': 'synthetic'
-             },
+                'dataset_name': 'synthetic',
+                'method_name': 'QFedAvgServer'
+            },
             )
-

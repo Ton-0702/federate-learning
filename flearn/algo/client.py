@@ -46,6 +46,9 @@ class Client:
         self.valid_dataset = dataset.FEDDataset(**self.val_data)
         self.test_dataset = dataset.FEDDataset(**self.test_data)
 
+    def __str__(self):
+        return self.name
+
     def get_num_samples(self, name='train'):
         if name == 'train':
             return len(self.train_data['y'])

@@ -19,7 +19,8 @@ def norm_grad_dict(grads):
 
 class BaseServer:
     def __init__(self, model, opt, lossf, clients, train_data, test_data,
-                 dataset_name='', configs=None, metric_dir='experiments'):
+                 dataset_name, method_name, configs=None, metric_dir='experiments'):
+
         if configs is None:
             configs = {
                 'num_rounds': 10,
@@ -39,10 +40,11 @@ class BaseServer:
         self.train_data = train_data
         self.test_data = test_data
         self.dataset_name = dataset_name
+        self.method_name = method_name
         self.metrics_dir = metric_dir
 
         self.metrics = Metrics([c.name for c in self.clients], configs,
-                               self.dataset_name, self.metrics_dir)
+                               self.dataset_name, self.method_name, self.metrics_dir)
 
     def save_model(self):
         pass
@@ -68,8 +70,10 @@ class BaseServer:
 
 
 class FedAvgServer(BaseServer):
-    def __init__(self, model, opt, lossf, clients, train_data, test_data, configs=None):
-        super().__init__(model, opt, lossf, clients, train_data, test_data, configs)
+    def __init__(self, model, opt, lossf, clients, train_data, test_data,
+                 dataset_name, method_name, configs=None):
+        super().__init__(model, opt, lossf, clients, train_data, test_data,
+                         dataset_name, method_name, configs)
 
     def train(self):
         n = 0
@@ -86,8 +90,10 @@ class FedAvgServer(BaseServer):
 
 
 class FedSgdServer(BaseServer):
-    def __init__(self, model, opt, lossf, clients, train_data, test_data, configs=None):
-        super().__init__(model, opt, lossf, clients, train_data, test_data, configs)
+    def __init__(self, model, opt, lossf, clients, train_data, test_data,
+                 dataset_name, method_name, configs=None):
+        super().__init__(model, opt, lossf, clients, train_data, test_data,
+                         dataset_name, method_name, configs)
 
     def train(self):
         n = 0
@@ -110,8 +116,10 @@ class FedSgdServer(BaseServer):
 
 
 class QFedSgdServer(BaseServer):
-    def __init__(self, model, opt, lossf, clients, train_data, test_data, configs=None):
-        super().__init__(model, opt, lossf, clients, train_data, test_data, configs)
+    def __init__(self, model, opt, lossf, clients, train_data, test_data,
+                 dataset_name, method_name, configs=None):
+        super().__init__(model, opt, lossf, clients, train_data, test_data,
+                         dataset_name, method_name, configs)
 
     def train(self):
         deltas = {}
@@ -138,8 +146,10 @@ class QFedSgdServer(BaseServer):
 
 
 class QFedAvgServer(BaseServer):
-    def __init__(self, model, opt, lossf, clients, train_data, test_data, configs=None):
-        super().__init__(model, opt, lossf, clients, train_data, test_data, configs)
+    def __init__(self, model, opt, lossf, clients, train_data, test_data,
+                 dataset_name, method_name, configs=None):
+        super().__init__(model, opt, lossf, clients, train_data, test_data,
+                         dataset_name, method_name, configs)
 
     def train(self):
         simulated_grads = {}

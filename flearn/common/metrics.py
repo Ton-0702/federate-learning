@@ -5,7 +5,7 @@ from datetime import datetime
 
 
 class Metrics:
-    def __init__(self, client_names, params, dataset_name, metric_dir):
+    def __init__(self, client_names, params, dataset_name, method_name, metric_dir):
         self.client_names = client_names
         self.metrics = {}
         for key, val in params.items():
@@ -18,6 +18,8 @@ class Metrics:
             'grad_norms': []
         }
         self.metric_dir = metric_dir
+        self.metrics['dataset_name'] = dataset_name
+        self.metrics['method_name'] = method_name
         self.dataset_name = dataset_name
 
     def update(self, rnd, c_name, train_loss, train_acc, grad_norm):
