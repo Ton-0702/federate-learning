@@ -109,7 +109,7 @@ class Client:
                 loss = self.lossf(y_bar, y)
                 loss.backward()
                 self.opt.step()
-        return self.get_weights(), self.get_train_error()
+        return self.get_weights(), self.get_train_error(), self.get_train_accuracy()
 
     def solve_sgd(self, num_epochs=1, batch_size=-1):
         """Run stochastic gradient descent on local data and return gradient to server"""
@@ -124,7 +124,7 @@ class Client:
                 y_bar = self.model(x)
                 loss = self.lossf(y_bar, y)
                 loss.backward()
-        return self.get_grads(), self.get_train_error()
+        return self.get_grads(), self.get_train_error(), self.get_train_accuracy()
 
 
 

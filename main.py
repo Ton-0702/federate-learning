@@ -26,7 +26,7 @@ def run_app(train_dir,
     for c_name in client_names:
         clients.append(Client(c_name, [], train_data[c_name], test_data[c_name], base_model, base_opt, lossf))
 
-    server = QFedAvgServer(base_model, base_opt, lossf, clients, train_data, test_data)
+    server = FedAvgServer(base_model, base_opt, lossf, clients, train_data, test_data)
     server.train()
     server.evaluate()
 
