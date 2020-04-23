@@ -10,9 +10,16 @@ def norm_grad(x):
     return torch.sum(x ** 2)
 
 
+def norm_grad_dict(grads):
+    grad_norms = {}
+    for key in grads.keys():
+        grad_norms[key] = norm_grad(grads[key])
+    return grad_norms
+
+
 class BaseServer:
     def __init__(self, model, opt, lossf, clients, train_data, test_data,
-                 dataset_name='', configs=None, metric_dir='../../experiments'):
+                 dataset_name='', configs=None, metric_dir='experiments'):
         if configs is None:
             configs = {
                 'num_rounds': 10,
@@ -20,7 +27,7 @@ class BaseServer:
                 'num_epochs': 3,
                 'batch_size': 8,
                 'lr': 0.1,
-                'q': 3
+                'q': 5
             }
         for key, val in configs.items():
             setattr(self, key, val)
@@ -50,12 +57,8 @@ class BaseServer:
     def train(self):
         pass
 
-    def run(self):
-        for r in range(self.num_rounds):
-            sub_clients = self.sample_clients()
-            self.train()
-            for client in sub_clients:
-                self.metrics.update(r, client.name, )
+    def report(self):
+        self.metrics.write()
 
     def sample_clients(self):
         return random.sample(
@@ -77,6 +80,7 @@ class FedAvgServer(BaseServer):
             for clt in sub_clients:
                 clt.set_weights(self.model.state_dict())
                 ws, error, acc = clt.solve_avg(self.num_epochs, self.batch_size)
+                self.metrics.update(r, clt.name, error, acc, None)
                 for key in ws.keys():
                     self.model.state_dict()[key] += clt.get_num_samples() / n * ws[key]
 
@@ -97,6 +101,7 @@ class FedSgdServer(BaseServer):
             for clt in sub_clients:
                 clt.set_weights(self.model.state_dict())
                 grads, error, acc = clt.solve_sgd()
+                self.metrics.update(r, clt.name, error, acc, norm_grad_dict(grads))
                 for key in grads.keys():
                     temp_grads[key] += clt.get_num_samples() / n * grads[key]
 
@@ -120,6 +125,7 @@ class QFedSgdServer(BaseServer):
             for clt in sub_clients:
                 clt.set_weights(self.model.state_dict())
                 grads, error, acc = clt.solve_sgd()
+                self.metrics.update(r, clt.name, error, acc, norm_grad_dict(grads))
                 for key in grads.keys():
                     deltas[key].append(np.float_power(error + 1e-10, self.q) * grads[key])
                     hs[key].append(self.q * np.float_power(error + 1e-10, (self.q - 1)) *
@@ -149,6 +155,7 @@ class QFedAvgServer(BaseServer):
             for clt in sub_clients:
                 clt.set_weights(self.model.state_dict())
                 ws, error, acc = clt.solve_avg(self.num_epochs, self.batch_size)
+                self.metrics.update(r, clt.name, error, acc, None)
                 for key in ws.keys():
                     simulated_grads[key] -= ws[key]
                     simulated_grads[key] *= 1.0/self.lr

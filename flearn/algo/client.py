@@ -124,7 +124,7 @@ class Client:
                 y_bar = self.model(x)
                 loss = self.lossf(y_bar, y)
                 loss.backward()
-        return self.get_grads(), self.get_train_error(), self.get_train_accuracy()
+        return self.get_grads(), loss.item(), self.get_train_accuracy()
 
 
 

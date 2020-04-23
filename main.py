@@ -26,14 +26,18 @@ def run_app(train_dir,
     for c_name in client_names:
         clients.append(Client(c_name, [], train_data[c_name], test_data[c_name], base_model, base_opt, lossf))
 
-    server = FedAvgServer(base_model, base_opt, lossf, clients, train_data, test_data)
+    server = QFedAvgServer(base_model, base_opt, lossf, clients, train_data, test_data, configs['dataset_name'])
     server.train()
     server.evaluate()
+    server.report()
 
 
 if __name__ == '__main__':
     run_app('data/synthetic/train/',
             'data/synthetic/test/',
-            {'layer_sizes': [60, 120, 10], 'act_funcs': ['relu', 'softmax']}
+            {
+                'layer_sizes': [60, 10], 'act_funcs': ['softmax'],
+                'dataset_name': 'synthetic'
+             },
             )
 
