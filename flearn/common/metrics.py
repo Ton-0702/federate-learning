@@ -30,7 +30,9 @@ class Metrics:
         self.metrics['cs']['grad_norms'].append(str(grad_norm))
 
     def write(self):
-        write_path = os.path.join(self.metric_dir, datetime.now().strftime('%Y%m%d_%H%M%S'))
+        write_path = os.path.join(self.metric_dir,
+                                  self.metrics['method_name'],
+                                  datetime.now().strftime('%Y%m%d_%H%M%S'))
         os.makedirs(write_path, exist_ok=True)
         data_path = os.path.join(write_path, self.dataset_name + '.data.csv')
         meta_path = os.path.join(write_path, self.dataset_name + '.meta.csv')
