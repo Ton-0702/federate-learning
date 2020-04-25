@@ -54,9 +54,9 @@ class BaseServer:
             clt.set_weights(self.model.state_dict())
             train_acc = clt.get_train_accuracy()
             test_acc = clt.get_test_accuracy()
-            print('Name: ', clt.name)
-            print('Train accuracy: ', train_acc)
-            print('Test accuracy: ', test_acc)
+            # print('Name: ', clt.name)
+            # print('Train accuracy: ', train_acc)
+            # print('Test accuracy: ', test_acc)
             self.metrics.update(-1, clt.name, train_acc, test_acc, None)
 
     def train(self):
