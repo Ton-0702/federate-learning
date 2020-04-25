@@ -7,7 +7,7 @@ from ..common.metrics import Metrics
 
 
 def norm_grad(x):
-    return torch.sum(x ** 2)
+    return torch.sqrt(torch.norm(x))
 
 
 def norm_grad_dict(grads):
@@ -28,7 +28,7 @@ class BaseServer:
                 'num_epochs': 3,
                 'batch_size': 8,
                 'lr': 0.1,
-                'q': 5
+                'q': 1
             }
         for key, val in configs.items():
             setattr(self, key, val)
@@ -52,9 +52,12 @@ class BaseServer:
     def evaluate(self):
         for clt in self.clients:
             clt.set_weights(self.model.state_dict())
+            train_acc = clt.get_train_accuracy()
+            test_acc = clt.get_test_accuracy()
             print('Name: ', clt.name)
-            print('Train accuracy: ', clt.get_train_accuracy())
-            print('Test accuracy: ', clt.get_test_accuracy())
+            print('Train accuracy: ', train_acc)
+            print('Test accuracy: ', test_acc)
+            self.metrics.update(-1, clt.name, train_acc, test_acc, None)
 
     def train(self):
         pass
@@ -62,10 +65,15 @@ class BaseServer:
     def report(self):
         self.metrics.write()
 
+    def get_nks(self):
+        return [c.get_num_samples() for c in self.clients]
+
     def sample_clients(self):
-        return random.sample(
+        nks = self.get_nks()
+        return np.random.choice(
             self.clients,
-            int(self.pct_client_per_round * len(self.clients))
+            len(self.clients),
+            p=[e/sum(nks) for e in nks]
         )
 
 
@@ -76,8 +84,8 @@ class FedAvgServer(BaseServer):
                          dataset_name, method_name, configs)
 
     def train(self):
-        n = 0
         for r in range(self.num_rounds):
+            n = 0
             sub_clients = self.sample_clients()
             for clt in sub_clients:
                 n += clt.get_num_samples()
@@ -96,9 +104,9 @@ class FedSgdServer(BaseServer):
                          dataset_name, method_name, configs)
 
     def train(self):
-        n = 0
         temp_grads = {}
         for r in range(self.num_rounds):
+            n = 0
             for name, param in self.model.named_parameters():
                 temp_grads[name] = torch.zeros_like(param)
             sub_clients = self.sample_clients()
@@ -137,7 +145,7 @@ class QFedSgdServer(BaseServer):
                 for key in grads.keys():
                     deltas[key].append(np.float_power(error + 1e-10, self.q) * grads[key])
                     hs[key].append(self.q * np.float_power(error + 1e-10, (self.q - 1)) *
-                                   norm_grad(grads[key]) + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q))
+                                   norm_grad(grads[key]) ** 2 + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q))
 
             for key in self.model.state_dict():
                 total_delta = functools.reduce(operator.add, deltas[key])
@@ -171,8 +179,8 @@ class QFedAvgServer(BaseServer):
                     simulated_grads[key] *= 1.0/self.lr
                     deltas[key].append(np.float_power(error + 1e-10, self.q) * simulated_grads[key])
                     hs[key].append(self.q * np.float_power(error + 1e-10, (self.q - 1)) *
-                                   norm_grad(simulated_grads[key]) + (1.0 / self.lr) * np.float_power(error + 1e-10,
-                                                                                                      self.q))
+                                   norm_grad(simulated_grads[key]) ** 2
+                                   + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q))
             for key in self.model.state_dict():
                 total_delta = functools.reduce(operator.add, deltas[key])
                 total_h = functools.reduce(operator.add, hs[key])

@@ -1,8 +1,0 @@
-num_rounds: 10
-pct_client_per_round: 0.3
-num_epochs: 3
-batch_size: 8
-lr: 0.1
-q: 5
-dataset_name: synthetic
-method_name: QFedAvgServer

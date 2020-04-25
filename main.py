@@ -16,7 +16,7 @@ def run_app(train_dir,
     # Logistic regression model
     layer_sizes = configs.get('layer_sizes')
     act_funcs = configs.get('act_funcs')
-    lossf = nn.BCELoss() if act_funcs[-1] == 'sigmoid' else nn.NLLLoss()
+    lossf = nn.BCELoss() if act_funcs[-1] == 'sigmoid' else nn.CrossEntropyLoss()
 
     base_model = MLP(layer_sizes, act_funcs)
     base_opt = optim.SGD(params=base_model.parameters(), lr=0.05)
@@ -34,7 +34,6 @@ def run_app(train_dir,
                           dataset_name=configs['dataset_name'],
                           method_name=configs['method_name']
                           )
-
     server.train()
     server.evaluate()
     server.report()
