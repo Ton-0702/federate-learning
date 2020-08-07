@@ -36,7 +36,9 @@ class Metrics:
         os.makedirs(write_path, exist_ok=True)
         data_path = os.path.join(write_path, self.dataset_name + '.data.csv')
         meta_path = os.path.join(write_path, self.dataset_name + '.meta.csv')
+        pkl_path = os.path.join(write_path, self.dataset_name + '.pkl')
         pd.DataFrame(self.metrics['cs']).to_csv(data_path, index=False)
+        pd.DataFrame(self.metrics['cs']).to_pickle(pkl_path)
         del self.metrics['cs']
         with open(meta_path, 'w') as f:
             for key in self.metrics.keys():

@@ -130,6 +130,14 @@ class Client:
         return self.get_grads(), loss.item(), self.get_train_accuracy()
 
 
+class DL_Client(Client):
+    def __init__(self, name, group, train_data, test_data, model, opt, lossf, data_seed=0, lamD=0):
+        super().__init__( name, group, train_data, test_data, model, opt, lossf, data_seed)
+        self.lamD=lamD
 
+    def get_lambda(self):
+        return self.lamD
 
+    def update_lambda(self,lamD):
+        self.lamD=lamD
 

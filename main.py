@@ -6,10 +6,19 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 
+SERVER = {
+    'FedAvgServer': FedAvgServer,
+    'FedSgdServer': FedSgdServer,
+    'QFedSgdServer': QFedSgdServer,
+    'QFedAvgServer': QFedAvgServer
+}
+
 
 def run_app(train_dir,
             test_dir,
-            configs
+            configs,
+            server_configs=None,
+            return_flags=False
             ):
     client_names, groups, train_data, test_data = read_data(train_dir, test_dir, torch.long)
 
@@ -25,26 +34,34 @@ def run_app(train_dir,
     for c_name in client_names:
         clients.append(Client(c_name, [], train_data[c_name], test_data[c_name], base_model, base_opt, lossf))
 
-    server = FedAvgServer(model=base_model,
-                          opt=base_opt,
-                          lossf=lossf,
-                          clients=clients,
-                          train_data=train_data,
-                          test_data=test_data,
-                          dataset_name=configs['dataset_name'],
-                          method_name=configs['method_name']
-                          )
+    server = SERVER[configs['method_name']](model=base_model,
+                                            opt=base_opt,
+                                            lossf=lossf,
+                                            clients=clients,
+                                            train_data=train_data,
+                                            test_data=test_data,
+                                            dataset_name=configs['dataset_name'],
+                                            method_name=configs['method_name']
+                                            )
     server.train()
     server.evaluate()
     server.report()
 
 
 if __name__ == '__main__':
-    run_app('data/synthetic/train/',
-            'data/synthetic/test/',
-            {
+    run_app(train_dir='data/synthetic/train/',
+            test_dir='data/synthetic/test/',
+            configs={
                 'layer_sizes': [60, 10], 'act_funcs': ['softmax'],
                 'dataset_name': 'synthetic',
                 'method_name': 'QFedAvgServer'
             },
+            server_configs={
+                'num_rounds': 200,
+                'pct_client_per_round': 0.1,
+                'num_epochs': 1,
+                'batch_size': 8,
+                'lr': 0.1,
+                'q': 1
+            }
             )
