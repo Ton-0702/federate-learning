@@ -240,7 +240,7 @@ class QFedAvgServer(BaseServer):
                     simulated_grads[key] *= 1.0/self.lr
                     deltas[key].append(np.float_power(error + 1e-10, self.q) * simulated_grads[key])
                     hs[key].append(self.q * np.float_power(error + 1e-10, (self.q - 1)) *
-                                   norm_grad(simulated_grads[key]) ** 2
+                                   norm_grad_(simulated_grads) # norm_grad(simulated_grads[key]) ** 2
                                    + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q))
             for key in self.model.state_dict():
                 total_delta = functools.reduce(operator.add, deltas[key])
@@ -248,5 +248,21 @@ class QFedAvgServer(BaseServer):
                 self.model.state_dict()[key] -= total_delta / total_h
             self.evaluate_round(r)
 
+def norm_grad_(grads):
+    grads_list = np.array([])
+    for key in grads:
+        grads_list = np.append(grads_list,
+                               grads[key].detach().numpy())
+    return np.sum(np.square(grads_list))
 
+# def norm_grad(grad_list):
+#     # input: nested gradients
+#     # output: square of the L-2 norm
+#
+#     client_grads = grad_list[0] # shape now: (784, 26)
+#
+#     for i in range(1, len(grad_list)):
+#         client_grads = np.append(client_grads, grad_list[i]) # output a flattened array
+#
+#     return np.sum(np.square(client_grads))
 

@@ -17,7 +17,7 @@ SERVER = {
 def run_app(train_dir,
             test_dir,
             configs=dict(),
-            return_flags=False
+            report=True
             ):
     client_names, groups, train_data, test_data = read_data(train_dir, test_dir, torch.long)
 
@@ -46,7 +46,8 @@ def run_app(train_dir,
                                             )
     server.train()
     # server.evaluate()
-    server.report()
+    if report:
+        server.report()
 
     return server, clients
 
