@@ -20,7 +20,7 @@ def norm_grad_dict(grads):
 
 class BaseServer:
     def __init__(self, model, opt, lossf, clients, train_data, test_data,
-                 dataset_name, method_name, configs=None, server_configs=None,
+                 dataset_name, method_name, configs=None,
                  metric_dir='experiments'):
 
         default_configs = {
@@ -121,9 +121,9 @@ class BaseServer:
 
 class FedAvgServer(BaseServer):
     def __init__(self, model, opt, lossf, clients, train_data, test_data,
-                 dataset_name, method_name, configs=None, server_configs=None):
+                 dataset_name, method_name, configs=None):
         super().__init__(model, opt, lossf, clients, train_data, test_data,
-                         dataset_name, method_name, configs, server_configs)
+                         dataset_name, method_name, configs)
 
     def get_nks(self):
         return [c.get_num_samples() * c.get_lambda() + 1e-20 for c in self.clients]
@@ -157,9 +157,9 @@ class FedAvgServer(BaseServer):
 
 class FedSgdServer(BaseServer):
     def __init__(self, model, opt, lossf, clients, train_data, test_data,
-                 dataset_name, method_name, configs=None, server_configs=None):
+                 dataset_name, method_name, configs=None):
         super().__init__(model, opt, lossf, clients, train_data, test_data,
-                         dataset_name, method_name, configs, server_configs)
+                         dataset_name, method_name, configs)
 
     def train(self):
         temp_grads = {}
@@ -183,9 +183,9 @@ class FedSgdServer(BaseServer):
 
 class QFedSgdServer(BaseServer):
     def __init__(self, model, opt, lossf, clients, train_data, test_data,
-                 dataset_name, method_name, configs=None, server_configs=None):
+                 dataset_name, method_name, configs=None):
         super().__init__(model, opt, lossf, clients, train_data, test_data,
-                         dataset_name, method_name, configs, server_configs)
+                         dataset_name, method_name, configs)
 
     def train(self):
         deltas = {}
@@ -215,9 +215,9 @@ class QFedSgdServer(BaseServer):
 
 class QFedAvgServer(BaseServer):
     def __init__(self, model, opt, lossf, clients, train_data, test_data,
-                 dataset_name, method_name, configs=None, server_configs=None):
+                 dataset_name, method_name, configs=None):
         super().__init__(model, opt, lossf, clients, train_data, test_data,
-                         dataset_name, method_name, configs, server_configs)
+                         dataset_name, method_name, configs)
 
     def train(self):
         simulated_grads = {}
