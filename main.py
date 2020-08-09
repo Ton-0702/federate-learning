@@ -16,8 +16,7 @@ SERVER = {
 
 def run_app(train_dir,
             test_dir,
-            configs,
-            server_configs=None,
+            configs=dict(),
             return_flags=False
             ):
     client_names, groups, train_data, test_data = read_data(train_dir, test_dir, torch.long)
@@ -25,10 +24,11 @@ def run_app(train_dir,
     # Logistic regression model
     layer_sizes = configs.get('layer_sizes')
     act_funcs = configs.get('act_funcs')
+    lr = configs.get('lr')
     lossf = nn.BCELoss() if act_funcs[-1] == 'sigmoid' else nn.CrossEntropyLoss()
 
     base_model = MLP(layer_sizes, act_funcs)
-    base_opt = optim.SGD(params=base_model.parameters(), lr=0.05)
+    base_opt = optim.SGD(params=base_model.parameters(), lr=lr)
 
     clients = []
     for c_name in client_names:
@@ -41,26 +41,29 @@ def run_app(train_dir,
                                             train_data=train_data,
                                             test_data=test_data,
                                             dataset_name=configs['dataset_name'],
-                                            method_name=configs['method_name']
+                                            method_name=configs['method_name'],
+                                            configs=configs
                                             )
     server.train()
-    server.evaluate()
+    # server.evaluate()
     server.report()
+
+    return server, clients
 
 
 if __name__ == '__main__':
     run_app(train_dir='data/synthetic/train/',
             test_dir='data/synthetic/test/',
             configs={
+                # Model configs
                 'layer_sizes': [60, 10], 'act_funcs': ['softmax'],
                 'dataset_name': 'synthetic',
-                'method_name': 'QFedAvgServer'
-            },
-            server_configs={
-                'num_rounds': 200,
+                'method_name': 'QFedAvgServer',
+                # Server configs
+                'num_rounds': 2000,
                 'pct_client_per_round': 0.1,
                 'num_epochs': 1,
-                'batch_size': 8,
+                'batch_size': 10,
                 'lr': 0.1,
                 'q': 1
             }

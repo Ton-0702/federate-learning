@@ -6,12 +6,13 @@ import torch
 
 
 class Client:
-    def __init__(self, name, group, train_data, test_data, model, opt, lossf, data_seed=0):
+    def __init__(self, name, group, train_data, test_data, model, opt, lossf, data_seed=0, lamD=0):
         self.name = name
         self.model = model
         self.opt = opt
         self.group = group
         self.lossf = lossf
+        self.lamD = lamD
 
         data_x = torch.cat((train_data['x'], test_data['x']), 0)
         data_y = torch.cat((train_data['y'], test_data['y']), 0)
@@ -76,6 +77,12 @@ class Client:
             grad_dct[name] = param.grad
         return grad_dct
 
+    def get_lambda(self):
+        return self.lamD
+
+    def update_lambda(self,lamD):
+        self.lamD=lamD
+
     def get_train_error(self):
         y_bar = self.model(self.train_data['x'])
         return self.lossf(y_bar, self.train_data['y']).item()
@@ -129,15 +136,14 @@ class Client:
                 loss.backward()
         return self.get_grads(), loss.item(), self.get_train_accuracy()
 
-
-class DL_Client(Client):
-    def __init__(self, name, group, train_data, test_data, model, opt, lossf, data_seed=0, lamD=0):
-        super().__init__( name, group, train_data, test_data, model, opt, lossf, data_seed)
-        self.lamD=lamD
-
-    def get_lambda(self):
-        return self.lamD
-
-    def update_lambda(self,lamD):
-        self.lamD=lamD
+# class DL_Client(Client):
+#     def __init__(self, name, group, train_data, test_data, model, opt, lossf, data_seed=0, lamD=0):
+#         super().__init__( name, group, train_data, test_data, model, opt, lossf, data_seed)
+#         self.lamD=lamD
+#
+#     def get_lambda(self):
+#         return self.lamD
+#
+#     def update_lambda(self,lamD):
+#         self.lamD=lamD
 
