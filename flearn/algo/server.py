@@ -18,6 +18,13 @@ def norm_grad_flatten(dct):
     return norm_grad(torch.cat(arr))
 
 
+def deep_copy_state_dict(sd):
+    res = {}
+    for key in sd:
+        res[key] = sd[key].clone()
+    return res
+
+
 def norm_grad_dict(grads):
     grad_norms = {}
     for key in grads.keys():
@@ -239,7 +246,7 @@ class QFedAvgServer(BaseServer):
 
             sub_clients = self.sample_clients()
             for clt in sub_clients:
-                pre_weight = self.model.state_dict()  # Trung fixed
+                pre_weight = deep_copy_state_dict(self.model.state_dict())  # Trung fixed
                 clt.set_weights(self.model.state_dict())
                 error = clt.get_train_error() # Huy fixed
                 ws, _error, acc = clt.solve_avg(self.num_epochs, self.batch_size)
@@ -258,4 +265,5 @@ class QFedAvgServer(BaseServer):
                 total_h = functools.reduce(operator.add, hs[key])
                 self.model.state_dict()[key] -= total_delta / total_h
             self.evaluate_round(r)
+
 
