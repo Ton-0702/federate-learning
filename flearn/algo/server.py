@@ -8,7 +8,14 @@ from ..common.metrics import Metrics
 
 
 def norm_grad(x):
-    return torch.sqrt(torch.norm(x))
+    return torch.norm(x)
+
+
+def norm_grad_flatten(dct):
+    arr = []
+    for key in dct.keys():
+        arr.append(torch.flatten(dct[key]))
+    return norm_grad(torch.cat(arr))
 
 
 def norm_grad_dict(grads):
@@ -100,6 +107,7 @@ class BaseServer:
                             train_acc=global_train_acc,
                             test_acc=global_test_acc
                             )
+
     def train(self):
         pass
 
@@ -204,7 +212,7 @@ class QFedSgdServer(BaseServer):
                 for key in grads.keys():
                     deltas[key].append(np.float_power(error + 1e-10, self.q) * grads[key])
                     hs[key].append(self.q * np.float_power(error + 1e-10, (self.q - 1)) *
-                                   norm_grad(grads[key]) ** 2 + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q))
+                                   norm_grad_flatten(grads) ** 2 + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q))
 
             for key in self.model.state_dict():
                 total_delta = functools.reduce(operator.add, deltas[key])
@@ -231,38 +239,23 @@ class QFedAvgServer(BaseServer):
 
             sub_clients = self.sample_clients()
             for clt in sub_clients:
+                pre_weight = self.model.state_dict()  # Trung fixed
                 clt.set_weights(self.model.state_dict())
                 error = clt.get_train_error() # Huy fixed
                 ws, _error, acc = clt.solve_avg(self.num_epochs, self.batch_size)
                 # self.metrics.update(rnd=r, c_name=clt.name, train_loss=error, train_acc=acc, grad_norm=None)
                 for key in ws.keys():
-                    simulated_grads[key] = self.model.state_dict()[key]-ws[key] # Giang fixed
+                    simulated_grads[key] = pre_weight[key] - ws[key]  # Giang fixed
                     simulated_grads[key] *= 1.0/self.lr
                     deltas[key].append(np.float_power(error + 1e-10, self.q) * simulated_grads[key])
-                    hs[key].append(self.q * np.float_power(error + 1e-10, (self.q - 1)) *
-                                   norm_grad_(simulated_grads) # norm_grad(simulated_grads[key]) ** 2
-                                   + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q))
+                    hs[key].append(
+                        self.q * np.float_power(error + 1e-10, (self.q - 1)) *
+                        norm_grad_flatten(simulated_grads) ** 2
+                        + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q)
+                    )  # Trung fixed norm_grad_flatten
             for key in self.model.state_dict():
                 total_delta = functools.reduce(operator.add, deltas[key])
                 total_h = functools.reduce(operator.add, hs[key])
                 self.model.state_dict()[key] -= total_delta / total_h
             self.evaluate_round(r)
-
-def norm_grad_(grads):
-    grads_list = np.array([])
-    for key in grads:
-        grads_list = np.append(grads_list,
-                               grads[key].detach().numpy())
-    return np.sum(np.square(grads_list))
-
-# def norm_grad(grad_list):
-#     # input: nested gradients
-#     # output: square of the L-2 norm
-#
-#     client_grads = grad_list[0] # shape now: (784, 26)
-#
-#     for i in range(1, len(grad_list)):
-#         client_grads = np.append(client_grads, grad_list[i]) # output a flattened array
-#
-#     return np.sum(np.square(client_grads))
 
