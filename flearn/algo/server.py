@@ -260,7 +260,7 @@ class QFedAvgServer(BaseServer):
                     + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q)
                 )  # Trung fixed norm_grad_flatten
             for key in self.model.state_dict():
-                total_delta = functools.reduce(operator.add, deltas[key])
+                total_delta = torch.sum(torch.cat(deltas[key]))
                 total_h = sum([e.item() for e in hs])
                 self.model.state_dict()[key] -= total_delta / total_h
             self.evaluate_round(r)
