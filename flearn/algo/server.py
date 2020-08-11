@@ -237,7 +237,7 @@ class QFedAvgServer(BaseServer):
     def train(self):
         simulated_grads = {}
         deltas = {}
-        hs = {}
+        hs = []
         for r in tqdm(range(1, self.num_rounds + 1)):
             for name, param in self.model.named_parameters():
                 simulated_grads[name] = param.clone()
@@ -255,11 +255,11 @@ class QFedAvgServer(BaseServer):
                     simulated_grads[key] = pre_weight[key] - ws[key]  # Giang fixed
                     simulated_grads[key] *= 1.0/self.lr
                     deltas[key].append(np.float_power(error + 1e-10, self.q) * simulated_grads[key])
-                    hs[key].append(
-                        self.q * np.float_power(error + 1e-10, (self.q - 1)) *
-                        norm_grad_flatten(simulated_grads) ** 2
-                        + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q)
-                    )  # Trung fixed norm_grad_flatten
+                hs.append(
+                    self.q * np.float_power(error + 1e-10, (self.q - 1)) *
+                    norm_grad_flatten(simulated_grads) ** 2
+                    + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q)
+                )  # Trung fixed norm_grad_flatten
             for key in self.model.state_dict():
                 total_delta = functools.reduce(operator.add, deltas[key])
                 total_h = functools.reduce(operator.add, hs[key])
