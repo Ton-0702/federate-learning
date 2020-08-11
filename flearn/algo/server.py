@@ -242,7 +242,6 @@ class QFedAvgServer(BaseServer):
             for name, param in self.model.named_parameters():
                 simulated_grads[name] = param.clone()
                 deltas[name] = []
-                hs[name] = []
 
             sub_clients = self.sample_clients()
             for clt in sub_clients:
