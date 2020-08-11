@@ -1,4 +1,3 @@
-import random
 from tqdm import tqdm
 import torch
 import numpy as np
@@ -219,7 +218,8 @@ class QFedSgdServer(BaseServer):
                 for key in grads.keys():
                     deltas[key].append(np.float_power(error + 1e-10, self.q) * grads[key])
                     hs[key].append(self.q * np.float_power(error + 1e-10, (self.q - 1)) *
-                                   norm_grad_flatten(grads) ** 2 + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q))
+                                   norm_grad_flatten(grads) ** 2 + (1.0 / self.lr)
+                                   * np.float_power(error + 1e-10, self.q))
 
             for key in self.model.state_dict():
                 total_delta = functools.reduce(operator.add, deltas[key])
@@ -251,7 +251,7 @@ class QFedAvgServer(BaseServer):
                 ws, _error, acc = clt.solve_avg(self.num_epochs, self.batch_size)
                 # self.metrics.update(rnd=r, c_name=clt.name, train_loss=error, train_acc=acc, grad_norm=None)
                 for key in ws.keys():
-                    simulated_grads[key] = pre_weight[key] - ws[key]  # Giang fixed
+                    simulated_grads[key] = pre_weight[key] - ws[key]  # Trung & Giang fixed
                     simulated_grads[key] *= 1.0/self.lr
                     deltas[key].append(np.float_power(error + 1e-10, self.q) * simulated_grads[key])
                 hs.append(

@@ -28,7 +28,7 @@ def run_app(train_dir,
     lossf = nn.BCELoss() if act_funcs[-1] == 'sigmoid' else nn.CrossEntropyLoss()
 
     base_model = MLP(layer_sizes, act_funcs)
-    base_opt = optim.SGD(params=base_model.parameters(), lr=lr)
+    base_opt = optim.SGD(params=base_model.parameters(), lr=lr, weight_decay=1e-3)
 
     clients = []
     for c_name in client_names:
