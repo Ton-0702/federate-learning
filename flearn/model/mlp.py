@@ -23,7 +23,7 @@ class MLP(nn.Module):
                 x = torch.sigmoid(x)
             elif act_func == 'softmax':
                 pass
-#                 x = torch.softmax(x, dim=-1)
+                # x = torch.softmax(x, dim=-1)
             elif act_func == 'none':
                 x = layer(x)
         if self.layer_sizes[-1] == 1:
