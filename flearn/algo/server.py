@@ -262,3 +262,39 @@ class QFedAvgServer(BaseServer):
                 total_h = sum([e.item() for e in hs])
                 self.model.state_dict()[key] = pre_weight[key] - total_delta / total_h # Huy fixed
             self.evaluate_round(r)
+
+
+class DL_FedAvgServer(BaseServer):
+    def __init__(self, model, opt, lossf, clients, train_data, test_data,
+                 dataset_name, method_name, configs=None):
+        super().__init__(model, opt, lossf, clients, train_data, test_data,
+                         dataset_name, method_name, configs)
+    def DL_get_nks(self):
+        return [c.get_num_samples()*c.get_lambda()+1e-20 for c in self.clients]
+
+    def DL_sample_clients(self,):
+        nks = self.DL_get_nks()
+        return np.random.choice(
+            self.clients,
+            int(len(self.clients)*self.pct_client_per_round),
+            p=[e/sum(nks) for e in nks],
+            replace=False
+        )
+
+    def train(self,):
+        for r in range(self.num_rounds):
+            n = 0
+            Ls = []
+            sub_clients = self.DL_sample_clients()
+            for clt in sub_clients:
+                n += clt.get_num_samples()*clt.get_lambda()+1e-20
+            for clt in sub_clients:
+                clt.set_weights(self.model.state_dict())
+                ws, error, acc = clt.solve_avg(self.num_epochs, self.batch_size)
+                Ls.append(error)
+                self.metrics.update(r, clt.name, error, acc, None)
+                for key in ws.keys():
+                    self.model.state_dict()[key] += ((clt.get_num_samples()*clt.get_lambda()+1e-20) / n) * ws[key]
+            for clt,Li in zip(sub_clients,Ls):
+                clt.update_lambda(clt.get_lambda()+self.s*np.abs(Li-sum(Ls)/len(Ls)))
+
