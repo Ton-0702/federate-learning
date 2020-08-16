@@ -235,9 +235,6 @@ class QFedAvgServer(BaseServer):
                          dataset_name, method_name, configs)
 
     def train(self):
-        # simulated_grads = {}
-        # deltas = {}
-        # hs = []
         for r in tqdm(range(1, self.num_rounds + 1)):
             simulated_grads = {} # Huy fixed
             deltas = {}
@@ -257,16 +254,11 @@ class QFedAvgServer(BaseServer):
                     simulated_grads[key] = pre_weight[key] - ws[key]  # Trung & Giang fixed
                     simulated_grads[key] *= 1.0/self.lr
                     deltas[key].append(np.float_power(error + 1e-10, self.q) * simulated_grads[key])
-                norm = norm_grad_flatten(simulated_grads)
                 h = self.q * np.float_power(error + 1e-10, (self.q - 1)) * norm_grad_flatten(simulated_grads) \
                     + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q)
                 hs.append(h)  # Trung fixed norm_grad_flatten
-                # print(f'norm_grad_flatten {norm_grad_flatten(simulated_grads)}')
             for key in self.model.state_dict():
                 total_delta = torch.sum(torch.stack(deltas[key]), dim=0)
                 total_h = sum([e.item() for e in hs])
                 self.model.state_dict()[key] = pre_weight[key] - total_delta / total_h # Huy fixed
-                # if key == 'layers.0.weight': print(f'total_h {total_h}')
             self.evaluate_round(r)
-        print()
-
