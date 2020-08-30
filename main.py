@@ -35,10 +35,10 @@ def run_app(train_dir,
     base_opt={}
     for c_name in client_names:
         base_model[c_name] = MLP(layer_sizes, act_funcs)
-        base_opt[c_name] = optim.SGD(params=base_model.parameters(), lr=lr, weight_decay=1e-3)
+        base_opt[c_name] = optim.SGD(params=base_model[c_name].parameters(), lr=lr, weight_decay=1e-3)
         clients.append(Client(c_name, [], train_data[c_name], test_data[c_name], base_model[c_name], base_opt[c_name], lossf))
     base_model_sv = MLP(layer_sizes, act_funcs)
-    base_opt_sv = optim.SGD(params=base_model.parameters(), lr=lr, weight_decay=1e-3)
+    base_opt_sv = optim.SGD(params=base_model_sv.parameters(), lr=lr, weight_decay=1e-3)
     server = SERVER[configs['method_name']](model=base_model_sv,
                                             opt=base_opt_sv,
                                             lossf=lossf,
