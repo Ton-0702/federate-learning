@@ -3,11 +3,12 @@ import torch
 import numpy as np
 import functools
 import operator
+import copy
 from ..common.metrics import Metrics
 
 
 def norm_grad(x):
-    return torch.norm(x)**2
+    return torch.norm(x)
 
 
 def norm_grad_flatten(dct):
@@ -235,17 +236,17 @@ class QFedAvgServer(BaseServer):
                          dataset_name, method_name, configs)
 
     def train(self):
+        simulated_grads = {}
+        deltas = {}
+        hs = []
         for r in tqdm(range(1, self.num_rounds + 1)):
-            simulated_grads = {} # Huy fixed
-            deltas = {}
-            hs = []
             for name, param in self.model.named_parameters():
                 simulated_grads[name] = param.clone()
                 deltas[name] = []
 
             sub_clients = self.sample_clients()
+            pre_weight = deep_copy_state_dict(self.model.state_dict())  # Trung fixed
             for clt in sub_clients:
-                pre_weight = deep_copy_state_dict(self.model.state_dict())  # Trung fixed
                 clt.set_weights(self.model.state_dict())
                 error = clt.get_train_error() # Huy fixed
                 ws, _error, acc = clt.solve_avg(self.num_epochs, self.batch_size)
@@ -254,15 +255,16 @@ class QFedAvgServer(BaseServer):
                     simulated_grads[key] = pre_weight[key] - ws[key]  # Trung & Giang fixed
                     simulated_grads[key] *= 1.0/self.lr
                     deltas[key].append(np.float_power(error + 1e-10, self.q) * simulated_grads[key])
-                h = self.q * np.float_power(error + 1e-10, (self.q - 1)) * norm_grad_flatten(simulated_grads) \
+                hs.append(
+                    self.q * np.float_power(error + 1e-10, (self.q - 1)) *
+                    norm_grad_flatten(simulated_grads) ** 2
                     + (1.0 / self.lr) * np.float_power(error + 1e-10, self.q)
-                hs.append(h)  # Trung fixed norm_grad_flatten
+                )  # Trung fixed norm_grad_flatten
             for key in self.model.state_dict():
                 total_delta = torch.sum(torch.stack(deltas[key]), dim=0)
                 total_h = sum([e.item() for e in hs])
-                self.model.state_dict()[key] = pre_weight[key] - total_delta / total_h # Huy fixed
+                self.model.state_dict()[key] -= total_delta / total_h
             self.evaluate_round(r)
-
 
 class DL_FedAvgServer(BaseServer):
     def __init__(self, model, opt, lossf, clients, train_data, test_data,
@@ -280,21 +282,42 @@ class DL_FedAvgServer(BaseServer):
             p=[e/sum(nks) for e in nks],
             replace=False
         )
-
+    # temp_model=self.model()
     def train(self,):
         for r in range(self.num_rounds):
             n = 0
             Ls = []
-            sub_clients = self.DL_sample_clients()
+            sub_clients = self.sample_clients()
             for clt in sub_clients:
                 n += clt.get_num_samples()*clt.get_lambda()+1e-20
+            # print("round",r,";sum probability",sum([(clt.get_num_samples()*clt.get_lambda()+1e-20) / n for clt in sub_clients]))
+
+            pre_weight = deep_copy_state_dict(self.model.state_dict())
+            # print("pr_bf_lp",self.model.state_dict()[list(pre_weight.keys())[0]][1][:5])
             for clt in sub_clients:
-                clt.set_weights(self.model.state_dict())
+                # print(clt.name)
+                # print("sv_bf_cl",self.model.state_dict()[list(pre_weight.keys())[0]][1][:5])
+                clt.set_weights(pre_weight)
                 ws, error, acc = clt.solve_avg(self.num_epochs, self.batch_size)
                 Ls.append(error)
                 self.metrics.update(r, clt.name, error, acc, None)
+                # print("sv_bf_up",self.model.state_dict()[list(pre_weight.keys())[0]][1][:5])
                 for key in ws.keys():
-                    self.model.state_dict()[key] += ((clt.get_num_samples()*clt.get_lambda()+1e-20) / n) * ws[key]
+                    update_weight=((clt.get_num_samples()*clt.get_lambda()+1e-20) / n) * ws[key].clone()
+                    if clt!=sub_clients[0]:
+                        self.model.state_dict()[key].copy_(self.model.state_dict()[key] + update_weight) 
+                    else:
+                        self.model.state_dict()[key].copy_(update_weight)
+                    
+                # print("sv_at_up",self.model.state_dict()[list(pre_weight.keys())[0]][1][:5])
             for clt,Li in zip(sub_clients,Ls):
-                clt.update_lambda(clt.get_lambda()+self.s*np.abs(Li-sum(Ls)/len(Ls)))
+                new_lambda=clt.get_lambda()+self.s*np.abs(Li-sum(Ls)/len(Ls))
+                clt.update_lambda(new_lambda)
+            # print(Ls)
+            k = 0
+            for clt in self.clients:
+                k += clt.get_lambda()
+            for clt in self.clients:
+                clt.update_lambda(clt.get_lambda()/k)
+            self.evaluate_round(r)
 

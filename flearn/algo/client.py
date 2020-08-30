@@ -61,7 +61,7 @@ class Client:
     def set_weights(self, wdict):
         """Set model parameters"""
         for key in wdict:
-            self.model.state_dict()[key] = wdict[key]
+            self.model.state_dict()[key] = wdict[key].clone()
 
     def get_weights(self):
         """Set model parameters"""

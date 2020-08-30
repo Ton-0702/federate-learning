@@ -1,5 +1,5 @@
 from flearn.algo.client import Client
-from flearn.algo.server import FedAvgServer, FedSgdServer, QFedSgdServer, QFedAvgServer
+from flearn.algo.server import FedAvgServer, FedSgdServer, QFedSgdServer, QFedAvgServer, DL_FedAvgServer
 from flearn.model.mlp import MLP
 from flearn.utils import read_data
 import torch
@@ -10,7 +10,8 @@ SERVER = {
     'FedAvgServer': FedAvgServer,
     'FedSgdServer': FedSgdServer,
     'QFedSgdServer': QFedSgdServer,
-    'QFedAvgServer': QFedAvgServer
+    'QFedAvgServer': QFedAvgServer,
+    "DL_FedAvgServer":DL_FedAvgServer,
 }
 
 
@@ -27,14 +28,14 @@ def run_app(train_dir,
     lr = configs.get('lr')
     lossf = nn.BCELoss() if act_funcs[-1] == 'sigmoid' else nn.CrossEntropyLoss()
 
-    base_model = MLP(layer_sizes, act_funcs)
+    # base_model = MLP(layer_sizes, act_funcs)
     base_opt = optim.SGD(params=base_model.parameters(), lr=lr, weight_decay=1e-3)
 
     clients = []
     for c_name in client_names:
-        clients.append(Client(c_name, [], train_data[c_name], test_data[c_name], base_model, base_opt, lossf))
+        clients.append(Client(c_name, [], train_data[c_name], test_data[c_name], MLP(layer_sizes, act_funcs), base_opt, lossf))
 
-    server = SERVER[configs['method_name']](model=base_model,
+    server = SERVER[configs['method_name']](model=MLP(layer_sizes, act_funcs),
                                             opt=base_opt,
                                             lossf=lossf,
                                             clients=clients,
