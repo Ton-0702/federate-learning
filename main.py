@@ -32,7 +32,7 @@ def run_app(train_dir,
     
     clients = []
     base_model={}
-    base_opt{}
+    base_opt={}
     for c_name in client_names:
         base_model[c_name] = MLP(layer_sizes, act_funcs)
         base_opt[c_name] = optim.SGD(params=base_model.parameters(), lr=lr, weight_decay=1e-3)
