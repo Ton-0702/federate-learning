@@ -1,7 +1,7 @@
 from flearn.algo.client import Client
 from flearn.algo.server import FedAvgServer, FedSgdServer, QFedSgdServer, QFedAvgServer, DL_FedAvgServer
-from flearn.model.mlp import MLP, margin_loss
-from flearn.model.vehicle.svm import SVM, hingeloss
+from flearn.model.mlp import MLP
+from flearn.model.vehicle.svm import SVM, HingeLoss
 from flearn.utils import read_data
 import torch
 import torch.optim as optim
@@ -70,7 +70,7 @@ def run_vehicle(train_dir,
     act_funcs = configs.get('act_funcs')
     lr = configs.get('lr')
     # lossf = nn.BCELoss() if act_funcs[-1] == 'sigmoid' else nn.CrossEntropyLoss()
-    lossf = hingeloss()
+    lossf = HingeLoss()
     # base_model = MLP(layer_sizes, act_funcs)
 
     clients = []
@@ -124,14 +124,14 @@ if __name__ == '__main__':
                 # Model configs
                 'layer_sizes': [100, 1], 'act_funcs': ['none'],
                 'dataset_name': 'vehicle',
-                'method_name': 'QFedAvgServer',
+                'method_name': 'DL_FedAvgServer',
                 # Server configs
                 'num_rounds': 20,
                 'pct_client_per_round': 10.0 / 23.0,
                 'num_epochs': 1,
                 'batch_size': 64,
                 'lr': 0.1,
-                #     's':0.1,
+                's':0.1,
                 'q': 5,
                 'disable_tqdm': False
             },

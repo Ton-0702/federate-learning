@@ -123,7 +123,9 @@ class BaseServer:
             val_acc = clt.get_val_accuracy()
             test_loss = clt.get_test_error()
             test_acc = clt.get_test_accuracy()
-
+            # if val_loss is None:
+            #     print('Val loss None')
+            # print(clt.name, "val_loss", val_loss, "val_acc", val_acc, "test_loss", test_loss, "test_acc", test_acc)
             self.metrics.update(rnd=r,
                                 c_name=clt.name,
                                 train_loss=train_loss,
@@ -330,7 +332,7 @@ class DL_FedAvgServer(BaseServer):
                 clt.set_weights(pre_weight)
                 ws, error, acc = clt.solve_avg(self.num_epochs, self.batch_size)
                 Ls.append(error)
-                self.metrics.update(r, clt.name, error, acc, None)
+                # self.metrics.update(r, clt.name, error, acc, None)
                 # print("sv_bf_up",self.model.state_dict()[list(pre_weight.keys())[0]][1][:5])
                 for key in ws.keys():
                     update_weight=((clt.get_num_samples()*clt.get_lambda()+1e-20) / n) * ws[key].clone()
@@ -349,5 +351,7 @@ class DL_FedAvgServer(BaseServer):
                 k += clt.get_lambda()
             for clt in self.clients:
                 clt.update_lambda(clt.get_lambda()/k)
+
             self.evaluate_round(r)
+            pass
 
