@@ -16,6 +16,8 @@ class Metrics:
             'round': [],
             'train_loss': [],
             'train_acc': [],
+            'val_loss': [],
+            'val_acc': [],
             'test_loss': [],
             'test_acc': [],
             'grad_norms': []
@@ -25,11 +27,17 @@ class Metrics:
         self.metrics['method_name'] = method_name
         self.dataset_name = dataset_name
 
-    def update(self, rnd, c_name, train_loss=None, train_acc=None, test_loss=None, test_acc=None, grad_norm=None):
+    def update(self, rnd, c_name,
+               train_loss=None, train_acc=None,
+               val_loss=None, val_acc=None,
+               test_loss=None, test_acc=None,
+               grad_norm=None):
         self.metrics['cs']['round'].append(rnd)
         self.metrics['cs']['c_name'].append(c_name)
         self.metrics['cs']['train_loss'].append(train_loss)
         self.metrics['cs']['train_acc'].append(train_acc)
+        self.metrics['cs']['val_loss'].append(val_loss)
+        self.metrics['cs']['val_acc'].append(val_acc)
         self.metrics['cs']['test_loss'].append(test_loss)
         self.metrics['cs']['test_acc'].append(test_acc)
         self.metrics['cs']['grad_norms'].append(str(grad_norm))

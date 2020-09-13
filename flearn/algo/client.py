@@ -96,15 +96,18 @@ class Client:
         return self.lossf(y_bar, self.test_data['y']).item()
 
     def get_train_accuracy(self):
-        y_bar = self.model(self.train_data['x']).max(dim=1)[1]
+        # y_bar = self.model(self.train_data['x']).max(dim=1)[1]
+        y_bar = torch.sign(self.model(self.train_data['x']))
         return (y_bar == self.train_data['y']).int().sum().item() / len(self.train_data['y'])
 
     def get_val_accuracy(self):
-        y_bar = self.model(self.val_data['x']).max(dim=1)[1]
+        # y_bar = self.model(self.val_data['x']).max(dim=1)[1]
+        y_bar = torch.sign(self.model(self.val_data['x']))
         return (y_bar == self.val_data['y']).int().sum().item() / len(self.val_data['y'])
 
     def get_test_accuracy(self):
-        y_bar = self.model(self.test_data['x']).max(dim=1)[1]
+        # y_bar = self.model(self.test_data['x']).max(dim=1)[1]
+        y_bar = torch.sign(self.model(self.test_data['x']))
         return (y_bar == self.test_data['y']).int().sum().item() / len(self.test_data['y'])
 
     def solve_avg(self, num_epochs, batch_size):

@@ -48,7 +48,8 @@ class BaseServer:
             'num_epochs': 1,
             'batch_size': 10,
             'lr': 0.1,
-            'q': 1
+            'q': 1,
+            'disable_tqdm': True
         }
 
         if configs is not None:
@@ -65,6 +66,7 @@ class BaseServer:
         self.dataset_name = dataset_name
         self.method_name = method_name
         self.metrics_dir = metric_dir
+        self.disable_tqdm = configs['disable_tqdm'] if 'disable_tqdm' in configs else False
 
         self.metrics = Metrics([c.name for c in self.clients], default_configs,
                                self.dataset_name, self.method_name, self.metrics_dir)
@@ -82,19 +84,43 @@ class BaseServer:
     def evaluate_round(self, r):
         y_true_train = np.array([])
         y_pred_train = np.array([])
+        y_true_val = np.array([])
+        y_pred_val = np.array([])
         y_true_test = np.array([])
         y_pred_test = np.array([])
         for clt in self.clients:
             clt.set_weights(self.model.state_dict())
 
+            y_prob_train = clt.model(clt.train_data['x'])
+            y_prob_val = clt.model(clt.val_data['x'])
+            y_prob_test = clt.model(clt.test_data['x'])
+
+            # if len(y_prob_train.shape) == 1:
+            #     y_bar_train = (y_prob_train > 0.5).type(torch.float).numpy()
+            #     y_bar_val = (y_prob_val > 0.5).type(torch.float).numpy()
+            #     y_bar_test = (y_prob_test > 0.5).type(torch.float).numpy()
+            # else:
+            #     y_bar_train = y_prob_train.max(dim=1)[1].numpy()
+            #     y_bar_val = y_prob_val.max(dim=1)[1].numpy()
+            #     y_bar_test = y_prob_test.max(dim=1)[1].numpy()
+
+            y_bar_train = torch.sign(y_prob_train).detach().numpy()
+            y_bar_val = torch.sign(y_prob_val).detach().numpy()
+            y_bar_test = torch.sign(y_prob_test).detach().numpy()
+
             y_true_train = np.append(y_true_train, clt.train_data['y'].numpy())
-            y_pred_train = np.append(y_pred_train, clt.model(clt.train_data['x']).max(dim=1)[1].numpy())
+            y_pred_train = np.append(y_pred_train, y_bar_train) # clt.model(clt.train_data['x']).max(dim=1)[1].numpy()
+
+            y_true_val = np.append(y_true_val, clt.val_data['y'].numpy())
+            y_pred_val = np.append(y_pred_val, y_bar_val)
 
             y_true_test = np.append(y_true_test, clt.test_data['y'].numpy())
-            y_pred_test = np.append(y_pred_test, clt.model(clt.test_data['x']).max(dim=1)[1].numpy())
+            y_pred_test = np.append(y_pred_test, y_bar_test)
 
             train_loss = clt.get_train_error()
             train_acc = clt.get_train_accuracy()
+            val_loss = clt.get_val_error()
+            val_acc = clt.get_val_accuracy()
             test_loss = clt.get_test_error()
             test_acc = clt.get_test_accuracy()
 
@@ -102,16 +128,20 @@ class BaseServer:
                                 c_name=clt.name,
                                 train_loss=train_loss,
                                 train_acc=train_acc,
+                                val_loss=val_loss,
+                                val_acc=val_acc,
                                 test_loss=test_loss,
                                 test_acc=test_acc,
                                 grad_norm=None)
 
         # Global accuracy
         global_train_acc = (y_true_train == y_pred_train).sum() / y_true_train.shape[0]
+        global_val_acc = (y_true_val == y_pred_val).sum() / y_true_val.shape[0]
         global_test_acc = (y_true_test == y_pred_test).sum()/y_true_test.shape[0]
         self.metrics.update(rnd=r,
                             c_name='global',
                             train_acc=global_train_acc,
+                            val_acc=global_val_acc,
                             test_acc=global_test_acc
                             )
 
@@ -153,7 +183,7 @@ class FedAvgServer(BaseServer):
         )
 
     def train(self):
-        for r in range(self.num_rounds):
+        for r in tqdm(range(self.num_rounds), disable=self.disable_tqdm):
             n = 0
             Ls = []
             sub_clients = self.sample_clients()
@@ -166,9 +196,9 @@ class FedAvgServer(BaseServer):
                 # self.metrics.update(r, clt.name, error, acc, None)
                 for key in ws.keys():
                     self.model.state_dict()[key] += ((clt.get_num_samples()*clt.get_lambda()+1e-20) / n) * ws[key]
-            for clt, Li in zip(sub_clients, Ls):
-                clt.update_lambda(clt.get_lambda() + self.s * np.abs(Li - sum(Ls) / len(Ls)))
-
+            # for clt, Li in zip(sub_clients, Ls):
+            #     clt.update_lambda(clt.get_lambda() + self.s * np.abs(Li - sum(Ls) / len(Ls)))
+            self.evaluate_round(r)
 
 class FedSgdServer(BaseServer):
     def __init__(self, model, opt, lossf, clients, train_data, test_data,
@@ -198,14 +228,14 @@ class FedSgdServer(BaseServer):
 
 class QFedSgdServer(BaseServer):
     def __init__(self, model, opt, lossf, clients, train_data, test_data,
-                 dataset_name, method_name, configs=None):
+                 dataset_name, method_name, configs=None, disable_tqdm=False):
         super().__init__(model, opt, lossf, clients, train_data, test_data,
-                         dataset_name, method_name, configs)
+                         dataset_name, method_name, configs, disable_tqdm)
 
     def train(self):
         deltas = {}
         hs = {}
-        for r in tqdm(range(1, self.num_rounds + 1)):
+        for r in tqdm(range(1, self.num_rounds + 1), disable=self.disable_tqdm):
             # print(f"Training round {r}")
             for name, param in self.model.named_parameters():
                 deltas[name] = []
@@ -231,15 +261,15 @@ class QFedSgdServer(BaseServer):
 
 class QFedAvgServer(BaseServer):
     def __init__(self, model, opt, lossf, clients, train_data, test_data,
-                 dataset_name, method_name, configs=None):
+                 dataset_name, method_name, configs=None, disable_tqdm=False):
         super().__init__(model, opt, lossf, clients, train_data, test_data,
-                         dataset_name, method_name, configs)
+                         dataset_name, method_name, configs, disable_tqdm)
 
     def train(self):
         simulated_grads = {}
         deltas = {}
         hs = []
-        for r in tqdm(range(1, self.num_rounds + 1)):
+        for r in tqdm(range(1, self.num_rounds + 1), disable=self.disable_tqdm):
             for name, param in self.model.named_parameters():
                 simulated_grads[name] = param.clone()
                 deltas[name] = []
@@ -268,9 +298,9 @@ class QFedAvgServer(BaseServer):
 
 class DL_FedAvgServer(BaseServer):
     def __init__(self, model, opt, lossf, clients, train_data, test_data,
-                 dataset_name, method_name, configs=None):
+                 dataset_name, method_name, configs=None, disable_tqdm=False):
         super().__init__(model, opt, lossf, clients, train_data, test_data,
-                         dataset_name, method_name, configs)
+                         dataset_name, method_name, configs, disable_tqdm)
     def DL_get_nks(self):
         return [c.get_num_samples()*c.get_lambda()+1e-20 for c in self.clients]
 
@@ -284,7 +314,7 @@ class DL_FedAvgServer(BaseServer):
         )
     # temp_model=self.model()
     def train(self,):
-        for r in range(self.num_rounds):
+        for r in tqdm(range(self.num_rounds), disable=self.disable_tqdm):
             n = 0
             Ls = []
             sub_clients = self.sample_clients()
