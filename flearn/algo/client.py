@@ -110,7 +110,7 @@ class Client:
         y_bar = torch.sign(self.model(self.test_data['x']))
         return (y_bar == self.test_data['y']).int().sum().item() / len(self.test_data['y'])
 
-    def solve_avg(self, num_epochs, batch_size):
+    def solve_avg(self, num_epochs, batch_size, l2=None):
         """Run stochastic gradient descent on local data and return weight to server"""
         loader = dataloader.DataLoader(dataset=self.train_dataset,
                                        batch_size=batch_size,
@@ -120,6 +120,8 @@ class Client:
                 self.opt.zero_grad()
                 y_bar = self.model(x)
                 loss = self.lossf(y_bar, y)
+                if l2:
+                    reg = l2*(self.model.state_dict()['layers.0.weight'].square().sum())
                 loss.backward()
                 self.opt.step()
         return self.get_weights(), self.get_train_error(), self.get_train_accuracy()

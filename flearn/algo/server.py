@@ -271,6 +271,7 @@ class QFedAvgServer(BaseServer):
         simulated_grads = {}
         deltas = {}
         hs = []
+        loss_tracking = []
         for r in tqdm(range(1, self.num_rounds + 1), disable=self.disable_tqdm):
             for name, param in self.model.named_parameters():
                 simulated_grads[name] = param.clone()
@@ -278,10 +279,12 @@ class QFedAvgServer(BaseServer):
 
             sub_clients = self.sample_clients()
             pre_weight = deep_copy_state_dict(self.model.state_dict())  # Trung fixed
+            losses = []
             for clt in sub_clients:
                 clt.set_weights(self.model.state_dict())
                 error = clt.get_train_error() # Huy fixed
-                ws, _error, acc = clt.solve_avg(self.num_epochs, self.batch_size)
+                ws, _error, acc = clt.solve_avg(self.num_epochs, self.batch_size, l2=0.5)
+                losses.append(_error)
                 # self.metrics.update(rnd=r, c_name=clt.name, train_loss=error, train_acc=acc, grad_norm=None)
                 for key in ws.keys():
                     simulated_grads[key] = pre_weight[key] - ws[key]  # Trung & Giang fixed
@@ -296,7 +299,15 @@ class QFedAvgServer(BaseServer):
                 total_delta = torch.sum(torch.stack(deltas[key]), dim=0)
                 total_h = sum([e.item() for e in hs])
                 self.model.state_dict()[key] -= total_delta / total_h
+                # print(key, total_h)
             self.evaluate_round(r)
+            acc_list = []
+            for clt in self.clients:
+                acc_list.append(clt.get_test_accuracy())
+            # print(np.mean(acc_list), np.var(acc_list)*1e4)
+            loss_tracking.append(np.mean(losses))
+        pass
+
 
 class DL_FedAvgServer(BaseServer):
     def __init__(self, model, opt, lossf, clients, train_data, test_data,
@@ -353,5 +364,3 @@ class DL_FedAvgServer(BaseServer):
                 clt.update_lambda(clt.get_lambda()/k)
 
             self.evaluate_round(r)
-            pass
-

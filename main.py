@@ -7,6 +7,13 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 
+import numpy as np
+np.random.seed(0)
+torch.manual_seed(0)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+
 SERVER = {
     'FedAvgServer': FedAvgServer,
     'FedSgdServer': FedSgdServer,
@@ -78,11 +85,11 @@ def run_vehicle(train_dir,
     base_opt = {}
     for c_name in client_names:
         base_model[c_name] = SVM(layer_sizes, act_funcs)
-        base_opt[c_name] = optim.SGD(params=base_model[c_name].parameters(), lr=lr, weight_decay=0.5)
+        base_opt[c_name] = optim.SGD(params=base_model[c_name].parameters(), lr=lr)
         clients.append(
             Client(c_name, [], train_data[c_name], test_data[c_name], base_model[c_name], base_opt[c_name], lossf))
     base_model_sv = MLP(layer_sizes, act_funcs)
-    base_opt_sv = optim.SGD(params=base_model_sv.parameters(), lr=lr, weight_decay=0.5)
+    base_opt_sv = optim.SGD(params=base_model_sv.parameters(), lr=lr)
     server = SERVER[configs['method_name']](model=base_model_sv,
                                             opt=base_opt_sv,
                                             lossf=lossf,
@@ -124,16 +131,16 @@ if __name__ == '__main__':
                 # Model configs
                 'layer_sizes': [100, 1], 'act_funcs': ['none'],
                 'dataset_name': 'vehicle',
-                'method_name': 'DL_FedAvgServer',
+                'method_name': 'QFedAvgServer',
                 # Server configs
                 'num_rounds': 20,
                 'pct_client_per_round': 10.0 / 23.0,
                 'num_epochs': 1,
                 'batch_size': 64,
-                'lr': 0.1,
+                'lr': 0.01,
                 's':0.1,
-                'q': 5,
-                'disable_tqdm': False
+                'q': 0,
+                'disable_tqdm': True
             },
             report=False
             )
