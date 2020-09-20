@@ -272,6 +272,7 @@ class QFedAvgServer(BaseServer):
         deltas = {}
         hs = []
         loss_tracking = []
+        acc_list=[]
         for r in tqdm(range(1, self.num_rounds + 1), disable=self.disable_tqdm):
             for name, param in self.model.named_parameters():
                 simulated_grads[name] = param.clone()
@@ -301,12 +302,13 @@ class QFedAvgServer(BaseServer):
                 self.model.state_dict()[key] -= total_delta / total_h
                 # print(key, total_h)
             self.evaluate_round(r)
-            acc_list = []
+            acc_dict = {}
             for clt in self.clients:
-                acc_list.append(clt.get_test_accuracy())
+                acc_dict[clt.name]=clt.get_test_accuracy()
             # print(np.mean(acc_list), np.var(acc_list)*1e4)
             loss_tracking.append(np.mean(losses))
-        pass
+            acc_list.append(acc_dict)
+        self.metrics.metrics['acc'] = acc_list
 
 
 class DL_FedAvgServer(BaseServer):
@@ -327,6 +329,8 @@ class DL_FedAvgServer(BaseServer):
         )
     # temp_model=self.model()
     def train(self,):
+        ld = []
+        acc_list = []
         for r in tqdm(range(self.num_rounds), disable=self.disable_tqdm):
             n = 0
             Ls = []
@@ -358,9 +362,17 @@ class DL_FedAvgServer(BaseServer):
                 clt.update_lambda(new_lambda)
             # print(Ls)
             k = 0
+            ld_dict = {}
+            acc_dict = {}
             for clt in self.clients:
                 k += clt.get_lambda()
             for clt in self.clients:
                 clt.update_lambda(clt.get_lambda()/k)
-
+                ld_dict[clt.name] = clt.get_lambda()
+                acc_dict[clt.name] = clt.get_test_accuracy()
+            ld.append(ld_dict)
+            acc_list.append(acc_dict)
             self.evaluate_round(r)
+        # pd.DataFrame(ld).to_csv('ld.csv', index=False)
+        self.metrics.metrics['lambda'] = ld
+        self.metrics.metrics['acc'] = acc_list
