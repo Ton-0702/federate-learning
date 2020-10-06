@@ -64,6 +64,24 @@ def read_data(train_data_dir, test_data_dir, convert_tensor=True):
 
     return clients, groups, train_data, test_data
 
+def read_data_dict(train_data_dir, test_data_dir):
+
+    data = {}
+    
+    clients, groups, train_data, test_data = read_data(train_data_dir, 
+                                                       test_data_dir, 
+                                                       convert_tensor=True)
+
+    for client in clients:
+        data[client] = {}
+        data[client]['x_train'] = train_data[client]['x']
+        data[client]['y_train'] = train_data[client]['y']
+        data[client]['x_test'] = test_data[client]['x']
+        data[client]['y_test'] = test_data[client]['y']
+
+    return data
+
+
 
 class FEDDataset(data.Dataset):
     def __init__(self, x, y):
